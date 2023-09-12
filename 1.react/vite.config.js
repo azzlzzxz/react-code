@@ -14,6 +14,10 @@ export default defineConfig({
       shared: path.posix.resolve("src/shared"),
     },
   },
+  server: {
+    port: 3000,
+    open: true,
+  },
 });
 
 // window和linux的路径不一样，window\ ，linux/，所以要用path.posix.resolve
