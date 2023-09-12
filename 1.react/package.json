@@ -4,8 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@babel/core": "^7.22.17",
+    "@babel/plugin-transform-react-jsx": "^7.22.15",
+    "@vitejs/plugin-react": "^4.0.4",
+    "vite": "^4.4.9"
+  }
 }
