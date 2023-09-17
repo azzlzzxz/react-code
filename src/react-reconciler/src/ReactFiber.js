@@ -45,3 +45,41 @@ export function createFiber(tag, pendingProps, key) {
 export function createHostRootFiber() {
   return createFiber(HostRoot, null, null);
 }
+
+/**
+ * 基于老的fiber和新的属性，创建新的fiber
+ * @param {*} current 老fiber
+ * @param {*} pendingProps 新属性
+ */
+export function createWorkInProgress(current, pendingProps) {
+  // 拿到老fiber的论替
+  let workInprogress = current.alternate;
+
+  if (workInprogress === null) {
+    // 没有就去创建
+    workInprogress = createFiber(current.tag, pendingProps, current.key);
+    workInprogress.type = current.type;
+    workInprogress.stateNode = current.stateNode;
+
+    // 双向指向，互为替身
+    workInprogress.alternate = current;
+    current.alternate = workInprogress;
+  } else {
+    // 有就复用老fiber
+    workInprogress.pendingProps = pendingProps;
+    workInprogress.type = current.type;
+
+    // 清空副作用
+    workInprogress.flags = NoFlags;
+    workInprogress.subtreeFlags = NoFlags;
+  }
+
+  workInprogress.child = current.child;
+  workInprogress.memoizedProps = current.memoizedProps;
+  workInprogress.memoizedState = current.memoizedState;
+  workInprogress.updateQueue = current.updateQueue;
+  workInprogress.sibling = current.sibling;
+  workInprogress.index = current.index;
+
+  return workInprogress;
+}
