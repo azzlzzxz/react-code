@@ -1,4 +1,4 @@
-import { REACT_ELEMENT_TYPE } from "../shared/ReactSymbols";
+import { REACT_ELEMENT_TYPE } from "shared/ReactSymbols";
 import { createFiberFromElement } from "./ReactFiber";
 import { Placement } from "./ReactFiberFlags";
 

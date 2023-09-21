@@ -38,7 +38,9 @@ function updateHostRoot(current, workInProgress) {
   return workInProgress.child; // 根据新的虚拟DOM计算新的子节点
 }
 
-function updateHostComponent(current, workInProgress) {}
+function updateHostComponent(current, workInProgress) {
+  return null;
+}
 
 /**
  * 目标是根据新的虚拟DOM构建新的fiber子链表

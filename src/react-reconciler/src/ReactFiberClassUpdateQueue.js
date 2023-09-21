@@ -1,5 +1,5 @@
 import { markUpdateLaneFromFiberToRoot } from "./ReactFiberCocurrentUpdates";
-import { assign } from "shared/assign";
+import assign from "shared/assign";
 
 // 更新状态
 const UpdateState = 0;
