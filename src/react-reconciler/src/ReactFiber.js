@@ -1,4 +1,8 @@
-import { HostRoot } from "./ReactWorkTags";
+import {
+  HostComponent,
+  HostRoot,
+  IndeterminateComponent,
+} from "./ReactWorkTags";
 import { NoFlags } from "./ReactFiberFlags";
 
 /**
@@ -82,4 +86,26 @@ export function createWorkInProgress(current, pendingProps) {
   workInprogress.index = current.index;
 
   return workInprogress;
+}
+
+/**
+ * 根据虚拟DOM创建fiber节点
+ * @param {*} element
+ * @returns
+ */
+export function createFiberFromElement(element) {
+  const { type, key, pendingProps } = element;
+  return createFiberFromTypeAndProps(type, key, pendingProps);
+}
+
+function createFiberFromTypeAndProps(type, key, pendingProps) {
+  // 先给tag默认值，IndeterminateComponent不确定的组件类型，后面会根据type来修改tag的值
+  let tag = IndeterminateComponent;
+  // 如果类型type是一个字符串 span div，说明此fiber类型是一个原生组件
+  if (typeof type === "string") {
+    tag = HostComponent;
+  }
+  const fiber = createFiber(tag, pendingProps, key);
+  fiber.type = type;
+  return fiber;
 }
