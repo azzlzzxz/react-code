@@ -25,6 +25,7 @@ function reconcileChildren(current, workInProgress, nextChildren) {
 }
 
 function updateHostRoot(current, workInProgress) {
+  debugger;
   // 需要知道它的子虚拟DOM，知道它的儿子的虚拟DOM信息
   processUpdateQueue(workInProgress); // workInProgress.memoizedState = { element }
 
@@ -38,6 +39,12 @@ function updateHostRoot(current, workInProgress) {
   return workInProgress.child; // 根据新的虚拟DOM计算新的子节点
 }
 
+/**
+ * 构建原生组件的子fiber链表
+ * @param {*} current 老fiber
+ * @param {*} workInProgress 新fiber
+ * @returns
+ */
 function updateHostComponent(current, workInProgress) {
   return null;
 }
