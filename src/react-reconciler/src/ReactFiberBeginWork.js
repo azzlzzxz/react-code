@@ -2,7 +2,7 @@ import logger from "shared/logger";
 import { HostRoot, HostComponent, HostText } from "./ReactWorkTags";
 import { processUpdateQueue } from "./ReactFiberClassUpdateQueue";
 import { mountChildFibers, reconcileChildFibers } from "./ReactChildFiber";
-import { shouldSetTextContent } from 'react-dom-bindings/src/ReactDOMHostConfig'
+import { shouldSetTextContent } from 'react-dom-bindings/src/client/ReactDOMHostConfig'
 
 /**
  * 根据新的虚拟DOM构建新的fiber子链表

@@ -2,6 +2,8 @@ import { scheduleCallback } from "scheduler";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from "./ReactFiberBeginWork";
 import { completeWork } from "./ReactFiberCompleteWork";
+import { NoFlags, MutationMask } from "./ReactFiberFlags";
+import { commitMutationEffectsOnFiber } from './ReactFiberCommitWork'
 
 let workInProgress = null; // 正在进行中的任务
 
@@ -20,6 +22,24 @@ function ensureRootIsScheduled(root) {
   scheduleCallback(performConcurrentWorkOnRoot.bind(null, root));
 }
 
+function commitRoot(root) {
+  const { finishedWork } = root;
+  // 判断子树里有没有副作用 （插入/更新等）
+  const subtreeHasEffects = (finishedWork.subtreeFlags & MutationMask)!== NoFlags
+  // 判断根fiber自己有没有副作用
+  const rootHasEffect = (finishedWork.flags & MutationMask)!== NoFlags
+  // 如果自己有副作用或子节点有副作用那就进行提交DOM操作
+  if (subtreeHasEffects || rootHasEffect){
+    // console.log('commitRoot', finishedWork.child)
+
+    // 提交的变更 副作用 在 fiber 上
+    commitMutationEffectsOnFiber(finishedWork, root)
+  }
+
+  // 等DOM变更后，root 的 current属性指向新fiber树
+  root.current = finishedWork
+}
+
 /**
  * 根据虚拟DOM构建fiber树，要创建真实的DOM节点，还需要把真实的DOM节点插入容器
  * @param {*} root
@@ -27,6 +47,11 @@ function ensureRootIsScheduled(root) {
 function performConcurrentWorkOnRoot(root) {
   // 第一次渲染是以同步的方式渲染根节点，初次渲染的时候，都是同步的
   renderRootSync(root);
+
+  // 开始进入提交阶段，就是执行副作用，修改真实DOM
+  const finishedWork = root.current.alternate;
+  root.finishedWork = finishedWork;
+  commitRoot(root);
 }
 
 // 创建一个新栈
