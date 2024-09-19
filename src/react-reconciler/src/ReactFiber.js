@@ -1,6 +1,7 @@
 import {
   HostComponent,
   HostRoot,
+  HostText,
   IndeterminateComponent,
 } from "./ReactWorkTags";
 import { NoFlags } from "./ReactFiberFlags";
@@ -40,6 +41,7 @@ export function FiberNode(tag, pendingProps, key) {
   //我们使用双缓冲池技术，因为我们知道我们最多只需要树的两个版本。
   //我们将可以自由重用的“其他”未使用节点集合在一起。
   this.alternate = null;
+  this.index = 0
 }
 
 export function createFiber(tag, pendingProps, key) {
@@ -94,7 +96,7 @@ export function createWorkInProgress(current, pendingProps) {
  * @returns
  */
 export function createFiberFromElement(element) {
-  const { type, key, pendingProps } = element;
+  const { type, key, props: pendingProps } = element;
   return createFiberFromTypeAndProps(type, key, pendingProps);
 }
 
@@ -108,4 +110,8 @@ function createFiberFromTypeAndProps(type, key, pendingProps) {
   const fiber = createFiber(tag, pendingProps, key);
   fiber.type = type;
   return fiber;
+}
+
+export function createFiberFromText(content) {
+  return createFiber(HostText, content, null);
 }
