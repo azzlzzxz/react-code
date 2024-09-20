@@ -1,20 +1,16 @@
+import * as React from './react';
 import { createRoot } from "react-dom/src/client/ReactDOMRoot";
 
+function counter (state, action) {
+  if (action.type === 'add') return state + action.payload
+
+  return state
+}
 function FunctionComponent() {
-    return (
-      <h1
-        onClick={(event) => console.log('ParentBubble','event.currentTarget:',event.currentTarget)}
-        onClickCapture={(event) => console.log('ParentCapture','event.currentTarget:',event.currentTarget)}
-      >
-        <span
-          onClick={(event) => console.log('ChildBubble','event.currentTarget:',event.currentTarget)}
-          onClickCapture={(event) => console.log('ChildCapture','event.currentTarget:',event.currentTarget)}
-        >
-          hello
-        </span>
-      </h1>
-    )
-  }
+  const [number, setNumber] = React.useReducer(counter, 0)
+  
+  return <button onClick={() => setNumber({ type: 'add', payload: 1 })}>{ number }</button>
+}
 
 let element = <FunctionComponent />
 
