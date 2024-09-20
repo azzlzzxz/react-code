@@ -32,7 +32,7 @@ function dispatchDiscreteEvent(domEventName, eventSystemFlags, container, native
  * @param {*} nativeEvent 原生的事件
  */
 export function dispatchEvent(domEventName, eventSystemFlags, targetContainer, nativeEvent) {
-  console.log('dispatchEvent', domEventName, eventSystemFlags, targetContainer, nativeEvent)
+//   console.log('dispatchEvent', domEventName, eventSystemFlags, targetContainer, nativeEvent)
 
   // 获取事件源，它是一个真实DOM
   const nativeEventTarget = getEventTarget(nativeEvent);
