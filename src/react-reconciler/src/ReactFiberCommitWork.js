@@ -172,11 +172,8 @@ export function commitMutationEffectsOnFiber (finishedWork, root) {
             const newProps = finishedWork.memoizedProps;
             const oldProps = current !== null ? current.memoizedProps : newProps;
             const type = finishedWork.type;
-            console.log('oldProps',oldProps)
-            console.log('newProps',newProps)
             // 原生组件的更新队列里放的是带生效的属性
             const updatePayload = finishedWork.updateQueue;
-            console.log('updatePayload',updatePayload)
             finishedWork.updateQueue = null;
             if (updatePayload) {
               commitUpdate(instance, updatePayload, type, oldProps, newProps, finishedWork);

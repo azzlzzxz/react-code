@@ -85,7 +85,7 @@ export function updateFunctionComponent(current, workInProgress, Component, next
  * @returns
  */
 export function beginWork(current, workInProgress) {
-  logger("beginWork", workInProgress);
+  // logger("beginWork", workInProgress);
   switch (workInProgress.tag) {
     // 因为在React里组件其实有两种，一种是函数组件，一种是类组件，但是它们都是都是函数
     case IndeterminateComponent:

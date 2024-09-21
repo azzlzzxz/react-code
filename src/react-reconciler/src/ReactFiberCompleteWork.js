@@ -57,7 +57,7 @@ function updateHostComponent(current, workInProgress, type, newProps) {
   const instance = workInProgress.stateNode;//老的DOM节点
   // 比较新老属性，收集属性的差异
   const updatePayload = prepareUpdate(instance, type, oldProps, newProps);
-  console.log(updatePayload)
+  // console.log(updatePayload)
   // 让原生组件的新fiber更新队列等于 updatePayload（他是个数组[]）
   workInProgress.updateQueue = updatePayload;
   if (updatePayload) {

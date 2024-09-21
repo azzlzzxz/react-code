@@ -61,6 +61,7 @@ function performConcurrentWorkOnRoot(root) {
 
 // 创建一个新栈
 function prepareFreshStack(root) {
+  // 创建根节点的新fiber
   workInProgress = createWorkInProgress(root.current, null);
 
   finishQueueingConcurrentUpdates(); // 在工作循环之前完成更新队列的收集

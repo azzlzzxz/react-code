@@ -1,8 +1,12 @@
 import { REACT_ELEMENT_TYPE } from "shared/ReactSymbols";
-import { createFiberFromElement, createFiberFromText,createWorkInProgress } from "./ReactFiber";
+import {
+  createFiberFromElement,
+  createFiberFromText,
+  createWorkInProgress,
+} from "./ReactFiber";
 import { Placement } from "./ReactFiberFlags";
 
-import isArray from 'shared/isArray'
+import isArray from "shared/isArray";
 
 /**
  *
@@ -17,7 +21,10 @@ function createChildReconciler(shouldTrackSideEffects) {
   }
 
   function createChild(returnFiber, newChild) {
-    if ((typeof newChild === "string" && newChild !== "") || typeof newChild === "number") {
+    if (
+      (typeof newChild === "string" && newChild !== "") ||
+      typeof newChild === "number"
+    ) {
       const created = createFiberFromText(`${newChild}`);
       created.return = returnFiber;
       return created;
@@ -36,7 +43,7 @@ function createChildReconciler(shouldTrackSideEffects) {
     }
     return null;
   }
-  
+
   /**
    * 单节点协调
    * @param {*} returnFiber 根fiber div#root对应的fiber
@@ -46,13 +53,14 @@ function createChildReconciler(shouldTrackSideEffects) {
    */
   function reconcileSingleElement(returnFiber, currentFirstChild, element) {
     //新的虚拟DOM的key,也就是唯一标准
-    const key = element.key;        // null
+    const key = element.key; // null
     let child = currentFirstChild; // 老的FunctionComponent对应的fiber
     while (child !== null) {
       //判断此老fiber对应的key和新的虚拟DOM对应的key是否一样 null===null
       if (child.key === key) {
         //判断老fiber对应的类型和新虚拟DOM元素对应的类型是否相同
-        if (child.type === element.type) {// p div
+        if (child.type === element.type) {
+          // p div
           //如果key一样，类型也一样，则认为此节点可以复用
           const existing = useFiber(child, element.props);
           existing.return = returnFiber;
@@ -94,8 +102,8 @@ function createChildReconciler(shouldTrackSideEffects) {
   function reconcileChildrenArray(returnFiber, currentFirstChild, newChildren) {
     let resultingFirstChild = null; //返回的第一个新节点
     let previousNewFiber = null; //上一个的新fiber
-    let newIdx = 0;//用来遍历新的虚拟DOM的索引
-    
+    let newIdx = 0; //用来遍历新的虚拟DOM的索引
+
     for (; newIdx < newChildren.length; newIdx++) {
       const newFiber = createChild(returnFiber, newChildren[newIdx]);
       if (newFiber === null) continue;
@@ -110,7 +118,7 @@ function createChildReconciler(shouldTrackSideEffects) {
       //让newFiber成为最后一个或者说上一个子fiber
       previousNewFiber = newFiber;
     }
-    
+
     return resultingFirstChild;
   }
 
@@ -139,7 +147,7 @@ function createChildReconciler(shouldTrackSideEffects) {
     if (isArray(newChild)) {
       return reconcileChildrenArray(returnFiber, currentFirstChild, newChild);
     }
-    
+
     return null;
   }
 
