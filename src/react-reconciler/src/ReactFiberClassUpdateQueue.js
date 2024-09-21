@@ -1,4 +1,4 @@
-import { markUpdateLaneFromFiberToRoot } from "./ReactFiberCocurrentUpdates";
+import { markUpdateLaneFromFiberToRoot } from "./ReactFiberConcurrentUpdates";
 import assign from "shared/assign";
 
 // 更新状态

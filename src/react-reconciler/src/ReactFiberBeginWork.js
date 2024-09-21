@@ -72,6 +72,12 @@ export function mountIndeterminateComponent(current, workInProgress, Component) 
   return workInProgress.child;
 }
 
+export function updateFunctionComponent(current, workInProgress, Component, nextProps) {
+  const nextChildren = renderWithHooks(current, workInProgress, Component, nextProps);
+  reconcileChildren(current, workInProgress, nextChildren);
+  return workInProgress.child;
+}
+
 /**
  * 目标是根据新的虚拟DOM构建新的fiber子链表
  * @param {*} current 老fiber
@@ -84,6 +90,11 @@ export function beginWork(current, workInProgress) {
     // 因为在React里组件其实有两种，一种是函数组件，一种是类组件，但是它们都是都是函数
     case IndeterminateComponent:
       return mountIndeterminateComponent(current, workInProgress, workInProgress.type);
+    case FunctionComponent: {
+        const Component = workInProgress.type;
+        const nextProps = workInProgress.pendingProps;
+        return updateFunctionComponent(current, workInProgress, Component, nextProps);
+    }
     case HostRoot:
       return updateHostRoot(current, workInProgress);
     case HostComponent:

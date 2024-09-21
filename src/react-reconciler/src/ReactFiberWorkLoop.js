@@ -4,8 +4,10 @@ import { beginWork } from "./ReactFiberBeginWork";
 import { completeWork } from "./ReactFiberCompleteWork";
 import { NoFlags, MutationMask } from "./ReactFiberFlags";
 import { commitMutationEffectsOnFiber } from './ReactFiberCommitWork'
+import { finishQueueingConcurrentUpdates } from "./ReactFiberConcurrentUpdates";
 
 let workInProgress = null; // 正在进行中的任务
+let workInProgressRoot = null // 当前正在调度的跟节点
 
 /**
  * 计划更新root
@@ -18,6 +20,8 @@ export function scheduleUpdateOnFiber(root) {
 }
 
 function ensureRootIsScheduled(root) {
+  if (workInProgressRoot) return;
+  workInProgressRoot = root
   // 告诉浏览器要执行performConcurrentWorkOnRoot
   scheduleCallback(performConcurrentWorkOnRoot.bind(null, root));
 }
@@ -52,12 +56,15 @@ function performConcurrentWorkOnRoot(root) {
   const finishedWork = root.current.alternate;
   root.finishedWork = finishedWork;
   commitRoot(root);
+  workInProgressRoot = null
 }
 
 // 创建一个新栈
 function prepareFreshStack(root) {
   workInProgress = createWorkInProgress(root.current, null);
-  console.log("workInProgress", workInProgress);
+
+  finishQueueingConcurrentUpdates(); // 在工作循环之前完成更新队列的收集
+  // console.log("workInProgress", workInProgress);
 }
 
 // 开始构建fiber树

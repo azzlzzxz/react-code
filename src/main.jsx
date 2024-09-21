@@ -8,8 +8,19 @@ function counter (state, action) {
 }
 function FunctionComponent() {
   const [number, setNumber] = React.useReducer(counter, 0)
+
+  let attrs = { id: 'btn1' }
+
+  if (number === 6) {
+    delete attrs.id
+    attrs.style = {color: 'red'}
+  }
   
-  return <button onClick={() => setNumber({ type: 'add', payload: 1 })}>{ number }</button>
+  return <button {...attrs} onClick={() => {
+    setNumber({ type: 'add', payload: 1 })
+    setNumber({ type: 'add', payload: 2 })
+    setNumber({ type: 'add', payload: 3 })
+  }}>{ number }</button>
 }
 
 let element = <FunctionComponent />

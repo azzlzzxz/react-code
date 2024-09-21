@@ -1,6 +1,7 @@
 import { MutationMask, Placement } from './ReactFiberFlags'
-import { HostRoot, HostComponent, HostText,FunctionComponent } from './ReactWorkTags';
-import { appendChild, insertBefore } from 'react-dom-bindings/src/client/ReactDOMHostConfig';
+import { HostRoot, HostComponent, HostText, FunctionComponent } from './ReactWorkTags';
+import { appendChild, insertBefore, commitUpdate } from 'react-dom-bindings/src/client/ReactDOMHostConfig';
+import { Update } from './ReactFiberFlags';
 
 /**
  * 递归遍历处理变更的副作用
@@ -113,7 +114,7 @@ function getHostSibling(fiber) {
  * @param {*} finishedWork 
  */
 function commitPlacement(finishedWork) {
-    console.log('commitPlacement', finishedWork)
+    // console.log('commitPlacement', finishedWork)
 
     // 找父fiber
     const parentFiber = getHostParentFiber(finishedWork);
@@ -145,18 +146,46 @@ function commitPlacement(finishedWork) {
  * @param {*} root 根节点
  */
 export function commitMutationEffectsOnFiber (finishedWork, root) {
-    switch (finishedWork.tag) {
-        case FunctionComponent:
-        case HostRoot:
-        case HostComponent:
-        case HostText: {
-          //先遍历它们的子节点，处理它们的子节点上的副作用
-          recursivelyTraverseMutationEffects(root, finishedWork);
-          //再处理自己身上的副作用
-          commitReconciliationEffects(finishedWork);
-          break;
+  const current = finishedWork.alternate;// 当前fiber的老fiber
+  const flags = finishedWork.flags;
+  switch (finishedWork.tag) {
+      case FunctionComponent:
+      case HostRoot:
+      case HostText: {
+        //先遍历它们的子节点，处理它们的子节点上的副作用
+        recursivelyTraverseMutationEffects(root, finishedWork);
+        //再处理自己身上的副作用
+        commitReconciliationEffects(finishedWork);
+        break;
+      }
+      case HostComponent: {
+        //先遍历它们的子节点，处理它们的子节点上的副作用
+        recursivelyTraverseMutationEffects(root, finishedWork);
+        //再处理自己身上的副作用
+        commitReconciliationEffects(finishedWork);
+        //处理DOM更新
+        if (flags & Update) {
+          //获取真实DOM
+          const instance = finishedWork.stateNode;
+          //更新真实DOM
+          if (instance !== null) {
+            const newProps = finishedWork.memoizedProps;
+            const oldProps = current !== null ? current.memoizedProps : newProps;
+            const type = finishedWork.type;
+            console.log('oldProps',oldProps)
+            console.log('newProps',newProps)
+            // 原生组件的更新队列里放的是带生效的属性
+            const updatePayload = finishedWork.updateQueue;
+            console.log('updatePayload',updatePayload)
+            finishedWork.updateQueue = null;
+            if (updatePayload) {
+              commitUpdate(instance, updatePayload, type, oldProps, newProps, finishedWork);
+            }
+          }
         }
-        default:
-          break;
-    }
+        break;
+      }
+      default:
+        break;
+  }
 }

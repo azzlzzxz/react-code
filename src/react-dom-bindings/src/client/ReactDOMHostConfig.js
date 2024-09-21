@@ -1,5 +1,5 @@
 import { precacheFiberNode, updateFiberProps } from './ReactDOMComponentTree';
-import { setInitialProperties } from './ReactDOMComponent';
+import { setInitialProperties, diffProperties, updateProperties } from './ReactDOMComponent';
 export function shouldSetTextContent(type, props) {
     return typeof props.children === "string" || typeof props.children === "number";
 }
@@ -45,4 +45,13 @@ export function appendChild(parentInstance, child) {
  */
 export function insertBefore(parentInstance, child, beforeChild) {
     parentInstance.insertBefore(child, beforeChild);
+}
+
+export function prepareUpdate(domElement, type, oldProps, newProps) {
+    return diffProperties(domElement, type, oldProps, newProps);
+}
+
+export function commitUpdate(domElement, updatePayload, type, oldProps, newProps) {
+    updateProperties(domElement, updatePayload, type, oldProps, newProps);
+    updateFiberProps(domElement, newProps);
 }

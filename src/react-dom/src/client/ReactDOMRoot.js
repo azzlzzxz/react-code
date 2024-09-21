@@ -10,6 +10,7 @@ function ReactDOMRoot(internalRoot) {
 
 ReactDOMRoot.prototype.render = function (children) {
   const root = this._internalRoot;
+  root.containerInfo.innerHTML = ''; // 更新前置空一下
   updateContainer(children, root);
 };
 
