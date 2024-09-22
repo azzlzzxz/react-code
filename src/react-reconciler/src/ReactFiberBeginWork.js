@@ -13,6 +13,7 @@ import { shouldSetTextContent } from 'react-dom-bindings/src/client/ReactDOMHost
  * @returns
  */
 function reconcileChildren(current, workInProgress, nextChildren) {
+  // debugger
   // 如果此新fiber没有老fiber，说明此新fiber是新创建的不是更新的
   if (current === null) {
     workInProgress.child = mountChildFibers(workInProgress, null, nextChildren);

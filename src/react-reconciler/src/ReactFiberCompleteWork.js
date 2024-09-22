@@ -57,7 +57,6 @@ function updateHostComponent(current, workInProgress, type, newProps) {
   const instance = workInProgress.stateNode;//老的DOM节点
   // 比较新老属性，收集属性的差异
   const updatePayload = prepareUpdate(instance, type, oldProps, newProps);
-  // console.log(updatePayload)
   // 让原生组件的新fiber更新队列等于 updatePayload（他是个数组[]）
   workInProgress.updateQueue = updatePayload;
   if (updatePayload) {
@@ -87,13 +86,11 @@ export function completeWork(current, workInProgress) {
         } else { // 挂载
           // 创建真实DOM
           const instance = createInstance(type, newProps, workInProgress);
-
           //把自己所有的子节点都添加到自己的身上
           appendAllChildren(instance, workInProgress);
 
           // fiber 的 stateNode属性指向真实DOM
           workInProgress.stateNode = instance;
-
           finalizeInitialChildren(instance, type, newProps);
           
           bubbleProperties(workInProgress);

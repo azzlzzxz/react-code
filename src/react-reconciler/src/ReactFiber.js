@@ -37,10 +37,13 @@ export function FiberNode(tag, pendingProps, key) {
   this.flags = NoFlags;
   // 子节点对应的副作用标识
   this.subtreeFlags = NoFlags;
+  // 存放需要删除的子fiber节点的数组
+  this.deletions = null;
   // 替身、轮替
   //我们使用双缓冲池技术，因为我们知道我们最多只需要树的两个版本。
   //我们将可以自由重用的“其他”未使用节点集合在一起。
   this.alternate = null;
+  
   this.index = 0
 }
 

@@ -1,10 +1,11 @@
-import { scheduleCallback } from "scheduler";
+import { scheduleCallback } from "../../scheduler/index";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from "./ReactFiberBeginWork";
 import { completeWork } from "./ReactFiberCompleteWork";
-import { NoFlags, MutationMask } from "./ReactFiberFlags";
+import { NoFlags, MutationMask, ChildDeletion, Placement, Update } from "./ReactFiberFlags";
 import { commitMutationEffectsOnFiber } from './ReactFiberCommitWork'
 import { finishQueueingConcurrentUpdates } from "./ReactFiberConcurrentUpdates";
+import { FunctionComponent, HostComponent, HostRoot, HostText } from "./ReactWorkTags";
 
 let workInProgress = null; // 正在进行中的任务
 let workInProgressRoot = null // 当前正在调度的跟节点
@@ -54,7 +55,10 @@ function performConcurrentWorkOnRoot(root) {
 
   // 开始进入提交阶段，就是执行副作用，修改真实DOM
   const finishedWork = root.current.alternate;
+  printFinishedWork(finishedWork)
+  
   root.finishedWork = finishedWork;
+
   commitRoot(root);
   workInProgressRoot = null
 }
@@ -117,4 +121,50 @@ function completeUnitOfWork(unitOfWork) {
     completedWork = returnFiber;
     workInProgress = completedWork;
   } while (completedWork !== null);
+}
+
+/******************************** 副作用执行日志打印 ********************************/
+
+function printFinishedWork(fiber) {
+  const {flags, deletions} = fiber
+  if ((flags & ChildDeletion) !== NoFlags) {
+    fiber.flags &= (~ChildDeletion);
+    console.log('子节点有删除' + (deletions.map(fiber => `${fiber.type}#${fiber.memoizedProps.id}`).join(','))) 
+  }
+
+  let child = fiber.child
+
+  while (child) {
+    printFinishedWork(child)
+    child = child.sibling
+  }
+
+  
+
+  if (fiber.flags !== NoFlags) {
+    console.log(getFlags(fiber), getTag(fiber.tag), typeof fiber.type === 'function' ? fiber.type.name : fiber.type, fiber.memoizedProps)
+  }
+}
+
+function getFlags(fiber) {
+  const {flags} = fiber
+  if (flags === Placement) {
+    return '插入'
+  }
+
+  if (flags === Update) {
+    return '更新'
+  }
+
+  return flags
+}
+
+function getTag(tag){
+  switch(tag){
+    case FunctionComponent: return 'FunctionComponent';break;
+    case HostRoot: return 'HostRoot';break;
+    case HostComponent: return 'HostComponent';break;
+    case HostText: return 'HostText';break;
+    default: tag;break;
+  }
 }
