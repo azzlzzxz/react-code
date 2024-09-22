@@ -92,9 +92,8 @@ export function completeWork(current, workInProgress) {
           // fiber 的 stateNode属性指向真实DOM
           workInProgress.stateNode = instance;
           finalizeInitialChildren(instance, type, newProps);
-          
-          bubbleProperties(workInProgress);
         }
+        bubbleProperties(workInProgress);
         break;
         case FunctionComponent: 
           bubbleProperties(workInProgress);
