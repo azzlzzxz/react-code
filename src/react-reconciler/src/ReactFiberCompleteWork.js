@@ -92,20 +92,19 @@ export function completeWork(current, workInProgress) {
           // fiber 的 stateNode属性指向真实DOM
           workInProgress.stateNode = instance;
           finalizeInitialChildren(instance, type, newProps);
-          
-          bubbleProperties(workInProgress);
         }
+        bubbleProperties(workInProgress);
         break;
         case FunctionComponent: 
           bubbleProperties(workInProgress);
-          break;
+        break;
         case HostText:
-        //如果完成的fiber是文本节点，那就创建真实的文本节点
-        const newText = newProps;
-        //创建真实的DOM节点并传入stateNode
-        workInProgress.stateNode = createTextInstance(newText);
-        //向上冒泡属性
-        bubbleProperties(workInProgress);
+          //如果完成的fiber是文本节点，那就创建真实的文本节点
+          const newText = newProps;
+          //创建真实的DOM节点并传入stateNode
+          workInProgress.stateNode = createTextInstance(newText);
+          //向上冒泡属性
+          bubbleProperties(workInProgress);
         break;
     }
 }

@@ -200,7 +200,7 @@ function commitPlacement(finishedWork) {
 
   // 找父fiber
   const parentFiber = getHostParentFiber(finishedWork);
-
+  
   switch (parentFiber.tag) {
     case HostRoot: {
       const parent = parentFiber.stateNode.containerInfo; // 根fiber的真实DOM元素（div #root）
@@ -244,6 +244,7 @@ export function commitMutationEffectsOnFiber(finishedWork, root) {
       //先遍历它们的子节点，处理它们的子节点上的副作用
       recursivelyTraverseMutationEffects(root, finishedWork);
       //再处理自己身上的副作用
+      
       commitReconciliationEffects(finishedWork);
       //处理DOM更新
       if (flags & Update) {
