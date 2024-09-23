@@ -1,10 +1,11 @@
 import ReactSharedInternals from "shared/ReactSharedInternals";
 import { enqueueConcurrentHookUpdate } from "./ReactFiberConcurrentUpdates";
 import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
-import { Passive as PassiveEffect } from "./ReactFiberFlags";
+import { Passive as PassiveEffect, Update as UpdateEffect } from "./ReactFiberFlags";
 import {
   HasEffect as HookHasEffect,
   Passive as HookPassive,
+  Layout as HookLayout,
 } from "./ReactHookEffectTags";
 
 const { ReactCurrentDispatcher } = ReactSharedInternals;
@@ -13,12 +14,14 @@ const HooksDispatcherOnMount = {
   useReducer: mountReducer,
   useState: mountState,
   useEffect: mountEffect,
+  useLayoutEffect: mountLayoutEffect
 };
 
 const HooksDispatcherOnUpdate = {
   useReducer: updateReducer,
   useState: updateState,
   useEffect: updateEffect,
+  useLayoutEffect: updateLayoutEffect
 };
 
 // 当前函数组件对应的 fiber
@@ -70,6 +73,16 @@ function updateWorkInProgressHook() {
     workInProgressHook = workInProgressHook.next = newHook;
   }
   return workInProgressHook;
+}
+
+/************************************ useLayoutEffect 实现 ****************************************/
+
+function mountLayoutEffect(create, deps) {
+  return mountEffectImpl(UpdateEffect, HookLayout, create, deps);
+}
+
+function updateLayoutEffect(create, deps) {
+  return updateEffectImpl(UpdateEffect, HookLayout, create, deps);
 }
 
 /************************************ useReducer 实现 *************************************/

@@ -1,4 +1,3 @@
-import { MutationMask, Placement } from "./ReactFiberFlags";
 import {
   HostRoot,
   HostComponent,
@@ -11,8 +10,8 @@ import {
   commitUpdate,
   removeChild,
 } from "react-dom-bindings/src/client/ReactDOMHostConfig";
-import { Update,Passive } from "./ReactFiberFlags";
-import { Passive as HookPassive, HasEffect as HookHasEffect } from "./ReactHookEffectTags";
+import { Update, Passive, LayoutMask, MutationMask, Placement } from "./ReactFiberFlags";
+import { Passive as HookPassive, HasEffect as HookHasEffect, Layout as HookLayout } from "./ReactHookEffectTags";
 
 let hostParent = null;
 /**
@@ -224,7 +223,7 @@ function commitPlacement(finishedWork) {
 }
 
 /**
- * 遍历fiber树，执行fiber上的副作用 变更操作
+ * 遍历fiber树，执行fiber上的副作用 变更DOM操作
  * @param {*} finishedWork fiber节点
  * @param {*} root 根节点
  */
@@ -232,7 +231,16 @@ export function commitMutationEffectsOnFiber(finishedWork, root) {
   const current = finishedWork.alternate; // 当前fiber的老fiber
   const flags = finishedWork.flags;
   switch (finishedWork.tag) {
-    case FunctionComponent:
+    case FunctionComponent:{
+      //先遍历它们的子节点，处理它们的子节点上的副作用
+      recursivelyTraverseMutationEffects(root, finishedWork);
+      //再处理自己身上的副作用
+      commitReconciliationEffects(finishedWork);
+      if (flags & Update) {
+        commitHookEffectListUnmount(HookHasEffect | HookLayout, finishedWork);
+      }
+      break;
+    }
     case HostRoot:
     case HostText: {
       //先遍历它们的子节点，处理它们的子节点上的副作用
@@ -278,7 +286,7 @@ export function commitMutationEffectsOnFiber(finishedWork, root) {
   }
 }
 
-/************************************ 先执行 提交 unmount(destroy)阶段的 effect 副作用 *************************************/
+/************************************ 先执行 提交 unmount(destroy)阶段的 effect 副作用 useEffect 的实现 *************************************/
 
 export function commitPassiveUnmountEffects(finishedWork) {
   commitPassiveUnmountOnFiber(finishedWork);
@@ -335,7 +343,7 @@ function commitHookEffectListUnmount(flags, finishedWork) {
   }
 }
 
-/************************************ 再执行 提交 mount阶段的 effect 副作用 *************************************/
+/************************************ 再执行 提交 mount阶段的 effect 副作用 useEffect 的实现*************************************/
 
 /**
  * 
@@ -399,5 +407,42 @@ function commitHookEffectListMount(flags, finishedWork) {
       }
       effect = effect.next;
     } while (effect !== firstEffect)
+  }
+}
+
+/********************************** useLayoutEffect 在提交阶段执行 *******************************/
+
+export function commitLayoutEffects(finishedWork, root) {
+  //老的根fiber
+  const current = finishedWork.alternate;
+  commitLayoutEffectOnFiber(root, current, finishedWork);
+}
+function commitLayoutEffectOnFiber(finishedRoot, current, finishedWork) {
+  const flags = finishedWork.flags;
+  switch (finishedWork.tag) {
+    case HostRoot: {
+      recursivelyTraverseLayoutEffects(finishedRoot, finishedWork);
+      break;
+    }
+    case FunctionComponent: {
+      recursivelyTraverseLayoutEffects(finishedRoot, finishedWork);
+      if (flags & LayoutMask) {// LayoutMask=Update=4
+        commitHookLayoutEffects(finishedWork, HookHasEffect | HookLayout);
+      }
+      break;
+    }
+  }
+}
+function commitHookLayoutEffects(finishedWork, hookFlags) {
+  commitHookEffectListMount(hookFlags, finishedWork);
+}
+function recursivelyTraverseLayoutEffects(root, parentFiber) {
+  if (parentFiber.subtreeFlags & LayoutMask) {
+    let child = parentFiber.child;
+    while (child !== null) {
+      const current = child.alternate;
+      commitLayoutEffectOnFiber(root, current, child);
+      child = child.sibling;
+    }
   }
 }

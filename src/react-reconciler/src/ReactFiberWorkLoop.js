@@ -14,6 +14,7 @@ import {
   commitMutationEffectsOnFiber, //执行DOM操作
   commitPassiveUnmountEffects, //执行destroy
   commitPassiveMountEffects, //执行create
+  commitLayoutEffects,
 } from "./ReactFiberCommitWork";
 import { finishQueueingConcurrentUpdates } from "./ReactFiberConcurrentUpdates";
 import {
@@ -78,8 +79,10 @@ function commitRoot(root) {
   const rootHasEffect = (finishedWork.flags & MutationMask) !== NoFlags;
   // 如果自己有副作用或子节点有副作用那就进行提交DOM操作
   if (subtreeHasEffects || rootHasEffect) {
-    // 提交的变更 副作用 在 fiber 上
+    // 提交的变更 副作用 在 fiber 上，执行DOM变更
     commitMutationEffectsOnFiber(finishedWork, root);
+    // 同步执行LayoutEffect
+    commitLayoutEffects(finishedWork, root);
 
     // 提交变更后，把root（根节点）赋值给rootWithPendingPassiveEffects，再下个宏任务里 flushPassiveEffect 执行时就能拿到root
     if (rootDoesHavePassiveEffect) {
@@ -105,7 +108,8 @@ function performConcurrentWorkOnRoot(root) {
   printFiber(finishedWork);
 
   root.finishedWork = finishedWork;
-
+  
+  // 提交
   commitRoot(root);
   workInProgressRoot = null;
 }
