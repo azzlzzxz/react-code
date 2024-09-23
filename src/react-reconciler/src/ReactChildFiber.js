@@ -222,11 +222,12 @@ function createChildReconciler(shouldTrackSideEffects) {
   }
 
   function reconcileChildrenArray(returnFiber, currentFirstChild, newChildren) {
+    // debugger
     let resultingFirstChild = null; // 返回的第一个新节点
     let previousNewFiber = null; //上一个的一个新的子fiber
     let newIdx = 0;//用来遍历新的虚拟DOM的索引
     let oldFiber = currentFirstChild;//第一个老fiber
-    let nextOldFiber = null;//下一个第fiber
+    let nextOldFiber = null;//下一个老fiber
     let lastPlacedIndex = 0;//上一个不需要移动的老节点的索引
 
     // 开始第一轮循环 如果老fiber有值，新的虚拟DOM也有值

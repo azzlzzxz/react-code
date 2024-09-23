@@ -11,7 +11,8 @@ import {
   commitUpdate,
   removeChild,
 } from "react-dom-bindings/src/client/ReactDOMHostConfig";
-import { Update } from "./ReactFiberFlags";
+import { Update,Passive } from "./ReactFiberFlags";
+import { Passive as HookPassive, HasEffect as HookHasEffect } from "./ReactHookEffectTags";
 
 let hostParent = null;
 /**
@@ -274,5 +275,129 @@ export function commitMutationEffectsOnFiber(finishedWork, root) {
     }
     default:
       break;
+  }
+}
+
+/************************************ 先执行 提交 unmount(destroy)阶段的 effect 副作用 *************************************/
+
+export function commitPassiveUnmountEffects(finishedWork) {
+  commitPassiveUnmountOnFiber(finishedWork);
+}
+
+function commitPassiveUnmountOnFiber(finishedWork) {
+  const flags = finishedWork.flags;
+  switch (finishedWork.tag) {
+    case HostRoot: {
+      recursivelyTraversePassiveUnmountEffects(finishedWork);
+      break;
+    }
+    case FunctionComponent: {
+      recursivelyTraversePassiveUnmountEffects(finishedWork);
+      if (flags & Passive) {//1024
+        commitHookPassiveUnmountEffects(finishedWork, HookHasEffect | HookPassive);
+      }
+      break;
+    }
+  }
+}
+
+function recursivelyTraversePassiveUnmountEffects(parentFiber) {
+  if (parentFiber.subtreeFlags & Passive) {
+    let child = parentFiber.child;
+    while (child !== null) {
+      commitPassiveUnmountOnFiber(child);
+      child = child.sibling;
+    }
+  }
+}
+
+function commitHookPassiveUnmountEffects(finishedWork, hookFlags) {
+  commitHookEffectListUnmount(hookFlags, finishedWork);
+}
+
+function commitHookEffectListUnmount(flags, finishedWork) {
+  const updateQueue = finishedWork.updateQueue;
+  const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+  if (lastEffect !== null) {
+    //获取 第一个effect
+    const firstEffect = lastEffect.next;
+    let effect = firstEffect;
+    do {
+      //如果此 effect类型和传入的相同，都是 9 HookHasEffect | PassiveEffect
+      if ((effect.tag & flags) === flags) {
+        const destroy = effect.destroy;
+        if (destroy !== undefined) {
+          destroy();
+        }
+      }
+      effect = effect.next;
+    } while (effect !== firstEffect)
+  }
+}
+
+/************************************ 再执行 提交 mount阶段的 effect 副作用 *************************************/
+
+/**
+ * 
+ * @param {*} root 根节点
+ * @param {*} finishedWork 新根fiber
+ */
+export function commitPassiveMountEffects(root, finishedWork) {
+  commitPassiveMountOnFiber(root, finishedWork);
+}
+
+// 递归处理新fiber树上的 effect
+function commitPassiveMountOnFiber(finishedRoot, finishedWork) {
+  const flags = finishedWork.flags;
+  switch (finishedWork.tag) {
+    case HostRoot: {
+      recursivelyTraversePassiveMountEffects(finishedRoot, finishedWork);
+      break;
+    }
+    case FunctionComponent: {
+      recursivelyTraversePassiveMountEffects(finishedRoot, finishedWork);
+      if (flags & Passive) {//1024
+        commitHookPassiveMountEffects(finishedWork, HookHasEffect | HookPassive);
+      }
+      break;
+    }
+  }
+}
+
+// 深度优先的递归遍历
+function recursivelyTraversePassiveMountEffects(root, parentFiber) {
+  // 检查父fiber的子树是否包含副作用
+  if (parentFiber.subtreeFlags & Passive) {
+    let child = parentFiber.child;
+    // 遍历父fiber的所有子fiber
+    while (child !== null) {
+      // 每个子fiber上都执行commitPassiveMountOnFiber
+      commitPassiveMountOnFiber(root, child);
+      // 移动到下一个子fiber
+      child = child.sibling;
+    }
+  }
+}
+
+// 提交hook上的挂载副作用（effect）
+function commitHookPassiveMountEffects(finishedWork, hookFlags) {
+  commitHookEffectListMount(hookFlags, finishedWork);
+}
+// 从第一个开始 执行循环链表中的所有effect
+function commitHookEffectListMount(flags, finishedWork) {
+  const updateQueue = finishedWork.updateQueue;
+  const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+  if (lastEffect !== null) { // lastEffect不为null，至少有一个effect要执行
+    //获取 第一个effect
+    const firstEffect = lastEffect.next;
+    let effect = firstEffect;
+    do {
+      //如果此 effect类型和传入的相同，都是 9 HookHasEffect | PassiveEffect
+      if ((effect.tag & flags) === flags) {
+        const create = effect.create;
+        effect.destroy = create(); // 执行create方法，把结果给destroy
+      }
+      effect = effect.next;
+    } while (effect !== firstEffect)
   }
 }

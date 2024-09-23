@@ -1,7 +1,7 @@
-import ReactCurrentDispatcher from './ReactCurrentDispatcher';
+import ReactCurrentDispatcher from "./ReactCurrentDispatcher";
 
 function resolveDispatcher() {
-    return ReactCurrentDispatcher.current
+  return ReactCurrentDispatcher.current;
 }
 
 /**
@@ -10,11 +10,16 @@ function resolveDispatcher() {
  * @param {*} initialArg 初始状态
  */
 export function useReducer(reducer, initialArg) {
-    const dispatcher = resolveDispatcher();
-    return dispatcher.useReducer(reducer, initialArg);
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useReducer(reducer, initialArg);
 }
 
 export function useState(reducer, initialArg) {
-    const dispatcher = resolveDispatcher();
-    return dispatcher.useState(reducer, initialArg);
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useState(reducer, initialArg);
+}
+
+export function useEffect(create, deps) {
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useEffect(create, deps);
 }

@@ -2,13 +2,31 @@ import { scheduleCallback } from "../../scheduler/index";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from "./ReactFiberBeginWork";
 import { completeWork } from "./ReactFiberCompleteWork";
-import { NoFlags, MutationMask, ChildDeletion, Placement, Update } from "./ReactFiberFlags";
-import { commitMutationEffectsOnFiber } from './ReactFiberCommitWork'
+import {
+  NoFlags,
+  MutationMask,
+  ChildDeletion,
+  Placement,
+  Update,
+  Passive,
+} from "./ReactFiberFlags";
+import {
+  commitMutationEffectsOnFiber, //执行DOM操作
+  commitPassiveUnmountEffects, //执行destroy
+  commitPassiveMountEffects, //执行create
+} from "./ReactFiberCommitWork";
 import { finishQueueingConcurrentUpdates } from "./ReactFiberConcurrentUpdates";
-import { FunctionComponent, HostComponent, HostRoot, HostText } from "./ReactWorkTags";
+import {
+  FunctionComponent,
+  HostComponent,
+  HostRoot,
+  HostText,
+} from "./ReactWorkTags";
 
 let workInProgress = null; // 正在进行中的任务
-let workInProgressRoot = null // 当前正在调度的跟节点
+let workInProgressRoot = null; // 当前正在调度的跟节点
+let rootDoesHavePassiveEffect = false; // 此根节点上有没有useEffect的类似副作用
+let rootWithPendingPassiveEffects = null; // 具有useEffect副作用的跟节点（FiberRootNode，根fiber.stateNode）
 
 /**
  * 计划更新root
@@ -22,27 +40,56 @@ export function scheduleUpdateOnFiber(root) {
 
 function ensureRootIsScheduled(root) {
   if (workInProgressRoot) return;
-  workInProgressRoot = root
+  workInProgressRoot = root;
   // 告诉浏览器要执行performConcurrentWorkOnRoot
   scheduleCallback(performConcurrentWorkOnRoot.bind(null, root));
 }
 
-function commitRoot(root) {
-  const { finishedWork } = root;
-  // 判断子树里有没有副作用 （插入/更新等）
-  const subtreeHasEffects = (finishedWork.subtreeFlags & MutationMask)!== NoFlags
-  // 判断根fiber自己有没有副作用
-  const rootHasEffect = (finishedWork.flags & MutationMask)!== NoFlags
-  // 如果自己有副作用或子节点有副作用那就进行提交DOM操作
-  if (subtreeHasEffects || rootHasEffect){
-    // console.log('commitRoot', finishedWork.child)
+// 刷新副作用，在构建之后执行
+function flushPassiveEffect() {
+  if (rootWithPendingPassiveEffects !== null) {
+    // 有需要执行副作用的根
+    const root = rootWithPendingPassiveEffects;
+    // 先执行卸载副作用，destroy
+    commitPassiveUnmountEffects(root.current);
+    // 再执行挂载副作用 create
+    commitPassiveMountEffects(root, root.current);
+  }
+}
 
+function commitRoot(root) {
+  // 获取新构建好的fiber树的根fiber
+  const { finishedWork } = root;
+  // 如果新的根fiber的子节点有effect的副作用 或 自身上有effect的副作用
+  if (
+    (finishedWork.subtreeFlags & Passive) !== NoFlags ||
+    (finishedWork.flags & Passive) !== NoFlags
+  ) {
+    if (!rootDoesHavePassiveEffect) {
+      rootDoesHavePassiveEffect = true; // 表示跟上有要执行的副作用
+      // scheduleCallback 不会立刻执行，它会开启一个宏任务，在构建之后执行
+      scheduleCallback(flushPassiveEffect);
+    }
+  }
+  // 判断子树里有没有副作用 （插入/更新等）
+  const subtreeHasEffects =
+    (finishedWork.subtreeFlags & MutationMask) !== NoFlags;
+  // 判断根fiber自己有没有副作用
+  const rootHasEffect = (finishedWork.flags & MutationMask) !== NoFlags;
+  // 如果自己有副作用或子节点有副作用那就进行提交DOM操作
+  if (subtreeHasEffects || rootHasEffect) {
     // 提交的变更 副作用 在 fiber 上
-    commitMutationEffectsOnFiber(finishedWork, root)
+    commitMutationEffectsOnFiber(finishedWork, root);
+
+    // 提交变更后，把root（根节点）赋值给rootWithPendingPassiveEffects，再下个宏任务里 flushPassiveEffect 执行时就能拿到root
+    if (rootDoesHavePassiveEffect) {
+      rootDoesHavePassiveEffect = false
+      rootWithPendingPassiveEffects = root
+    }
   }
 
   // 等DOM变更后，root 的 current属性指向新fiber树
-  root.current = finishedWork
+  root.current = finishedWork;
 }
 
 /**
@@ -55,12 +102,12 @@ function performConcurrentWorkOnRoot(root) {
 
   // 开始进入提交阶段，就是执行副作用，修改真实DOM
   const finishedWork = root.current.alternate;
-  printFiber(finishedWork)
-  
+  printFiber(finishedWork);
+
   root.finishedWork = finishedWork;
-  
+
   commitRoot(root);
-  workInProgressRoot = null
+  workInProgressRoot = null;
 }
 
 // 创建一个新栈
@@ -142,7 +189,11 @@ function printFiber(fiber) {
     if (fiber.deletions) {
       for (let i = 0; i < fiber.deletions.length; i++) {
         const childToDelete = fiber.deletions[i];
-        console.log(getTag(childToDelete.tag), childToDelete.type, childToDelete.memoizedProps);
+        console.log(
+          getTag(childToDelete.tag),
+          childToDelete.type,
+          childToDelete.memoizedProps
+        );
       }
     }
   }
