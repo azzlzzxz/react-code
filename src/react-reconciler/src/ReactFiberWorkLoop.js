@@ -1,4 +1,7 @@
-import { scheduleCallback } from "../../scheduler/index";
+import {
+  unstable_scheduleCallback as scheduleCallback,
+  unstable_NormalPriority as NormalSchedulerPriority,
+} from "../../scheduler/src/forks/Scheduler";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from "./ReactFiberBeginWork";
 import { completeWork } from "./ReactFiberCompleteWork";
@@ -43,7 +46,7 @@ function ensureRootIsScheduled(root) {
   if (workInProgressRoot) return;
   workInProgressRoot = root;
   // 告诉浏览器要执行performConcurrentWorkOnRoot
-  scheduleCallback(performConcurrentWorkOnRoot.bind(null, root));
+  scheduleCallback(NormalSchedulerPriority, performConcurrentWorkOnRoot.bind(null, root));
 }
 
 // 刷新副作用，在构建之后执行
@@ -69,7 +72,7 @@ function commitRoot(root) {
     if (!rootDoesHavePassiveEffect) {
       rootDoesHavePassiveEffect = true; // 表示跟上有要执行的副作用
       // scheduleCallback 不会立刻执行，它会开启一个宏任务，在构建之后执行
-      scheduleCallback(flushPassiveEffect);
+      scheduleCallback(NormalSchedulerPriority, flushPassiveEffect);
     }
   }
   // 判断子树里有没有副作用 （插入/更新等）
@@ -86,8 +89,8 @@ function commitRoot(root) {
 
     // 提交变更后，把root（根节点）赋值给rootWithPendingPassiveEffects，再下个宏任务里 flushPassiveEffect 执行时就能拿到root
     if (rootDoesHavePassiveEffect) {
-      rootDoesHavePassiveEffect = false
-      rootWithPendingPassiveEffects = root
+      rootDoesHavePassiveEffect = false;
+      rootWithPendingPassiveEffects = root;
     }
   }
 
@@ -108,7 +111,7 @@ function performConcurrentWorkOnRoot(root) {
   printFiber(finishedWork);
 
   root.finishedWork = finishedWork;
-  
+
   // 提交
   commitRoot(root);
   workInProgressRoot = null;
