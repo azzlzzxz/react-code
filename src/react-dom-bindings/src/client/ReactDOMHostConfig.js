@@ -4,6 +4,8 @@ import {
   diffProperties,
   updateProperties,
 } from "./ReactDOMComponent";
+import { getEventPriority } from "../events/ReactDOMEventListener";
+import { DefaultEventPriority } from "react-reconciler/src/ReactEventPriorities";
 export function shouldSetTextContent(type, props) {
   return (
     typeof props.children === "string" || typeof props.children === "number"
@@ -70,4 +72,13 @@ export function commitUpdate(
 
 export function removeChild(parentInstance, child) {
   parentInstance.removeChild(child);
+}
+
+// 获取当前事件优先级
+export function getCurrentEventPriority() {
+  const currentEvent = window.event;
+  if (currentEvent === undefined) {
+    return DefaultEventPriority;
+  }
+  return getEventPriority(currentEvent.type);
 }

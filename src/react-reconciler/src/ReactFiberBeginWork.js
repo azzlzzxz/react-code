@@ -1,9 +1,18 @@
 import logger from "shared/logger";
-import { HostRoot, HostComponent, HostText, IndeterminateComponent, FunctionComponent } from "./ReactWorkTags";
-import { processUpdateQueue } from "./ReactFiberClassUpdateQueue";
+import {
+  HostRoot,
+  HostComponent,
+  HostText,
+  IndeterminateComponent,
+  FunctionComponent,
+} from "./ReactWorkTags";
+import {
+  processUpdateQueue,
+  cloneUpdateQueue,
+} from "./ReactFiberClassUpdateQueue";
 import { mountChildFibers, reconcileChildFibers } from "./ReactChildFiber";
 import { renderWithHooks } from "./ReactFiberHooks";
-import { shouldSetTextContent } from 'react-dom-bindings/src/client/ReactDOMHostConfig'
+import { shouldSetTextContent } from "react-dom-bindings/src/client/ReactDOMHostConfig";
 
 /**
  * 根据新的虚拟DOM构建新的fiber子链表
@@ -27,9 +36,14 @@ function reconcileChildren(current, workInProgress, nextChildren) {
   }
 }
 
-function updateHostRoot(current, workInProgress) {
+function updateHostRoot(current, workInProgress, renderLanes) {
+  // 获取新的属性
+  const nextProps = workInProgress.pendingProps;
+  // 克隆更新队列
+  cloneUpdateQueue(current, workInProgress);
+  // debugger;
   // 需要知道它的子虚拟DOM，知道它的儿子的虚拟DOM信息
-  processUpdateQueue(workInProgress); // workInProgress.memoizedState = { element }
+  processUpdateQueue(workInProgress, nextProps, renderLanes); // workInProgress.memoizedState = { element }
 
   const nextState = workInProgress.memoizedState;
   // nextChildren是新的子虚拟DOM
@@ -65,7 +79,11 @@ function updateHostComponent(current, workInProgress) {
  * @param {*} workInProgress 新的fiber
  * @param {*} Component 组件类型，也就是函数组件的定义
  */
-export function mountIndeterminateComponent(current, workInProgress, Component) {
+export function mountIndeterminateComponent(
+  current,
+  workInProgress,
+  Component
+) {
   const props = workInProgress.pendingProps;
   const value = renderWithHooks(current, workInProgress, Component, props);
   workInProgress.tag = FunctionComponent;
@@ -73,8 +91,18 @@ export function mountIndeterminateComponent(current, workInProgress, Component) 
   return workInProgress.child;
 }
 
-export function updateFunctionComponent(current, workInProgress, Component, nextProps) {
-  const nextChildren = renderWithHooks(current, workInProgress, Component, nextProps);
+export function updateFunctionComponent(
+  current,
+  workInProgress,
+  Component,
+  nextProps
+) {
+  const nextChildren = renderWithHooks(
+    current,
+    workInProgress,
+    Component,
+    nextProps
+  );
   reconcileChildren(current, workInProgress, nextChildren);
   return workInProgress.child;
 }
@@ -83,23 +111,35 @@ export function updateFunctionComponent(current, workInProgress, Component, next
  * 目标是根据新的虚拟DOM构建新的fiber子链表
  * @param {*} current 老fiber
  * @param {*} workInProgress 新fiber
+ * @param {*} renderLanes 当前渲染优先级中优先级最高的lane
  * @returns
  */
-export function beginWork(current, workInProgress) {
+export function beginWork(current, workInProgress, renderLanes) {
   // logger("beginWork", workInProgress);
   switch (workInProgress.tag) {
     // 因为在React里组件其实有两种，一种是函数组件，一种是类组件，但是它们都是都是函数
     case IndeterminateComponent:
-      return mountIndeterminateComponent(current, workInProgress, workInProgress.type);
+      return mountIndeterminateComponent(
+        current,
+        workInProgress,
+        workInProgress.type,
+        renderLanes
+      );
     case FunctionComponent: {
-        const Component = workInProgress.type;
-        const nextProps = workInProgress.pendingProps;
-        return updateFunctionComponent(current, workInProgress, Component, nextProps);
+      const Component = workInProgress.type;
+      const nextProps = workInProgress.pendingProps;
+      return updateFunctionComponent(
+        current,
+        workInProgress,
+        Component,
+        nextProps,
+        renderLanes
+      );
     }
     case HostRoot:
-      return updateHostRoot(current, workInProgress);
+      return updateHostRoot(current, workInProgress, renderLanes);
     case HostComponent:
-      return updateHostComponent(current, workInProgress);
+      return updateHostComponent(current, workInProgress, renderLanes);
     case HostText:
       return null;
     default:
