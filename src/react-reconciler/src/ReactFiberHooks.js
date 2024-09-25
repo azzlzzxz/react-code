@@ -1,12 +1,17 @@
 import ReactSharedInternals from "shared/ReactSharedInternals";
 import { enqueueConcurrentHookUpdate } from "./ReactFiberConcurrentUpdates";
 import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
-import { Passive as PassiveEffect, Update as UpdateEffect } from "./ReactFiberFlags";
+import {
+  Passive as PassiveEffect,
+  Update as UpdateEffect,
+} from "./ReactFiberFlags";
 import {
   HasEffect as HookHasEffect,
   Passive as HookPassive,
   Layout as HookLayout,
 } from "./ReactHookEffectTags";
+import { NoLanes } from "./ReactFiberLane";
+import { requestUpdateLane } from "./ReactFiberWorkLoop";
 
 const { ReactCurrentDispatcher } = ReactSharedInternals;
 
@@ -14,14 +19,14 @@ const HooksDispatcherOnMount = {
   useReducer: mountReducer,
   useState: mountState,
   useEffect: mountEffect,
-  useLayoutEffect: mountLayoutEffect
+  useLayoutEffect: mountLayoutEffect,
 };
 
 const HooksDispatcherOnUpdate = {
   useReducer: updateReducer,
   useState: updateState,
   useEffect: updateEffect,
-  useLayoutEffect: updateLayoutEffect
+  useLayoutEffect: updateLayoutEffect,
 };
 
 // 当前函数组件对应的 fiber
@@ -196,30 +201,39 @@ function updateState(initialState) {
 }
 
 function dispatchSetState(fiber, queue, action) {
+  // 获取当前的更新赛道 (点击事件就是 1)
+  const lane = requestUpdateLane();
   const update = {
+    lane,
     action,
     hasEagerState: false, //是否有急切的更新
     eagerState: null, //急切的更新状态
     next: null,
   };
 
+  const alternate = fiber.alternate;
+
   //当你派发动作后，我立刻用上一次的状态和上一次的reducer计算新状态
   //只要第一个更新都能进行此项优化
-
-  //先获取队列上的老的状态和老的reducer
-  const { lastRenderedReducer, lastRenderedState } = queue;
-  //使用上次的状态和上次的reducer结合本次action进行计算新状态
-  const eagerState = lastRenderedReducer(lastRenderedState, action);
-  update.hasEagerState = true;
-  update.eagerState = eagerState;
-  if (Object.is(eagerState, lastRenderedState)) {
-    console.log("上次的状态和当前状态一样，不触发调度更新");
-    return;
+  if (
+    fiber.lanes === NoLanes &&
+    (alternate === null || alternate.lanes == NoLanes)
+  ) {
+    //先获取队列上的老的状态和老的reducer
+    const { lastRenderedReducer, lastRenderedState } = queue;
+    //使用上次的状态和上次的reducer结合本次action进行计算新状态
+    const eagerState = lastRenderedReducer(lastRenderedState, action);
+    update.hasEagerState = true;
+    update.eagerState = eagerState;
+    if (Object.is(eagerState, lastRenderedState)) {
+      console.log("上次的状态和当前状态一样，不触发调度更新");
+      return;
+    }
   }
 
   //下面是真正的入队更新，并调度更新逻辑
-  const root = enqueueConcurrentHookUpdate(fiber, queue, update);
-  scheduleUpdateOnFiber(root, fiber);
+  const root = enqueueConcurrentHookUpdate(fiber, queue, update, lane);
+  scheduleUpdateOnFiber(root, fiber, lane);
 }
 
 /************************************ useEffect 实现 *************************************/
@@ -358,7 +372,7 @@ function areHookInputsEqual(nextDeps, prevDeps) {
 export function renderWithHooks(current, workInProgress, Component, props) {
   currentlyRenderingFiber = workInProgress; // Function组件对应的 fiber
   // 函数组件更新队列里存的effect（因为每次渲染都会构建新的updateQueue，所以在渲染之前要清空，否则会重复）
-  workInProgress.updateQueue = null
+  workInProgress.updateQueue = null;
 
   // 如果有老的fiber,并且有老的hook链表，进入更新逻辑
   if (current !== null && current.memoizedState !== null) {
