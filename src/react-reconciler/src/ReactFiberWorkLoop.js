@@ -5,6 +5,7 @@ import {
   UserBlockingPriority as UserBlockingSchedulerPriority,
   NormalPriority as NormalSchedulerPriority,
   IdlePriority as IdleSchedulerPriority,
+  cancelCallback as Scheduler_cancelCallback,
 } from "../src/Scheduler";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from "./ReactFiberBeginWork";
@@ -78,15 +79,34 @@ export function scheduleUpdateOnFiber(root, fiber, lane) {
 }
 
 function ensureRootIsScheduled(root) {
+  //先获取当前根上执行任务
+  const existingCallbackNode = root.callbackNode;
+
   //获取当前优先级最高的车道
   const nextLanes = getNextLanes(root, workInProgressRootRenderLanes);
+
   //如果没有要执行的任务
   if (nextLanes === NoLanes) {
     return;
   }
 
-  // 获取新的调度优先级
+  // 获取新的调度优先级最高的赛道
   const newCallbackPriority = getHighestPriorityLane(nextLanes);
+
+  // debugger;
+
+  //获取现在根上正在运行的优先级
+  const existingCallbackPriority = root.callbackPriority;
+
+  //如果新的优先级和老的优先级一样，则可以进行批量更新
+  if (existingCallbackPriority === newCallbackPriority) {
+    return;
+  }
+
+  if (existingCallbackNode !== null) {
+    console.log("cancelCallback");
+    Scheduler_cancelCallback(existingCallbackNode);
+  }
 
   // 新的回调任务
   let newCallbackNode = null;
@@ -131,6 +151,8 @@ function ensureRootIsScheduled(root) {
   // 在根节点上执行的任务是newCallbackNode
   root.callbackNode = newCallbackNode;
 
+  root.callbackPriority = newCallbackPriority;
+
   /**************************** 上面的代码变更前 *****************************/
   // if (workInProgressRoot) return;
   // workInProgressRoot = root;
@@ -165,7 +187,7 @@ function performSyncWorkOnRoot(root) {
  */
 function performConcurrentWorkOnRoot(root, didTimeout) {
   // console.log("performConcurrentWorkOnRoot");
-  //先获取当前根节点上的任务
+  // 先获取当前根节点上的任务
   const originalCallbackNode = root.callbackNode;
   //获取当前优先级最高的车道
   const lanes = getNextLanes(root, NoLanes); //16
@@ -282,7 +304,7 @@ function workLoopSync() {
 function workLoopConcurrent() {
   //如果有下一个要构建的fiber并且时间片没有过期
   while (workInProgress !== null && !shouldYield()) {
-    // sleep(6);
+    // sleep(100);
     performUnitOfWork(workInProgress);
     // console.log("shouldYield()", shouldYield(), workInProgress);
   }
@@ -375,6 +397,7 @@ function commitRootImpl(root) {
   workInProgressRoot = null;
   workInProgressRootRenderLanes = NoLanes;
   root.callbackNode = null;
+  root.callbackPriority = null;
   // 如果新的根fiber的子节点有effect的副作用 或 自身上有effect的副作用
   if (
     (finishedWork.subtreeFlags & Passive) !== NoFlags ||
@@ -407,6 +430,9 @@ function commitRootImpl(root) {
 
   // 等DOM变更后，root 的 current属性指向新fiber树
   root.current = finishedWork;
+
+  //在提交之后，因为根上可能会有跳过的更新，所以需要重新再次调度
+  // ensureRootIsScheduled(root);
 }
 
 /******************************** 副作用执行日志打印 ********************************/

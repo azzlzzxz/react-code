@@ -123,7 +123,8 @@ function updateReducer(reducer) {
     } while (update !== null && update !== firstUpdate);
   }
 
-  hook.memoizedState = newState;
+  //计算好新的状态后，不但要改变hook的状态，也要改变hook上队列的lastRenderedState
+  hook.memoizedState = queue.lastRenderedState = newState;
   const dispatch = queue.dispatch;
 
   return [hook.memoizedState, dispatch];
@@ -136,6 +137,8 @@ function mountReducer(reducer, initialArg) {
   const queue = {
     pending: null,
     dispatch: null,
+    lastRenderedReducer: reducer,
+    lastRenderedState: initialArg,
   };
   hook.queue = queue;
   const dispatch = (queue.dispatch = dispatchReducerAction.bind(
@@ -214,7 +217,7 @@ function dispatchSetState(fiber, queue, action) {
   const alternate = fiber.alternate;
 
   //当你派发动作后，我立刻用上一次的状态和上一次的reducer计算新状态
-  //只要第一个更新都能进行此项优化
+  //只有第一个更新都能进行此项优化
   if (
     fiber.lanes === NoLanes &&
     (alternate === null || alternate.lanes == NoLanes)

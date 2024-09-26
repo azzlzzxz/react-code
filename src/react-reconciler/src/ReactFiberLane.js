@@ -22,7 +22,7 @@ export function markRootUpdated(root, updateLane) {
 }
 
 // 获取当前根节点上等待更新的所有赛道中，优先级最高的赛道
-export function getNextLanes(root) {
+export function getNextLanes(root, wipLanes) {
   //先获取所有的有更新的赛道
   const pendingLanes = root.pendingLanes;
   if (pendingLanes == NoLanes) {
@@ -31,6 +31,13 @@ export function getNextLanes(root) {
 
   // 获取所有的赛道中最高优先级的赛道
   const nextLanes = getHighestPriorityLanes(pendingLanes);
+
+  if (wipLanes !== NoLane && wipLanes !== nextLanes) {
+    // 新的赛道值比渲染中的车道大，说明新的赛道优先级更低
+    if (nextLanes > wipLanes) {
+      return wipLanes;
+    }
+  }
 
   return nextLanes;
 }

@@ -164,6 +164,8 @@ function performWorkUntilDeadline() {
     }
   }
 }
+
+// 取消任务（在workLoop中，判断continuationCallback是不是函数，不是的话直接出队）
 function unstable_cancelCallback(task) {
   task.callback = null;
 }
