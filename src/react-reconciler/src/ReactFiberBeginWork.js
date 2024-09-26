@@ -13,6 +13,7 @@ import {
 import { mountChildFibers, reconcileChildFibers } from "./ReactChildFiber";
 import { renderWithHooks } from "./ReactFiberHooks";
 import { shouldSetTextContent } from "react-dom-bindings/src/client/ReactDOMHostConfig";
+import { NoLanes } from "./ReactFiberLane";
 
 /**
  * 根据新的虚拟DOM构建新的fiber子链表
@@ -95,13 +96,15 @@ export function updateFunctionComponent(
   current,
   workInProgress,
   Component,
-  nextProps
+  nextProps,
+  renderLanes
 ) {
   const nextChildren = renderWithHooks(
     current,
     workInProgress,
     Component,
-    nextProps
+    nextProps,
+    renderLanes
   );
   reconcileChildren(current, workInProgress, nextChildren);
   return workInProgress.child;
@@ -116,6 +119,10 @@ export function updateFunctionComponent(
  */
 export function beginWork(current, workInProgress, renderLanes) {
   // logger("beginWork", workInProgress);
+
+  // 在构建fiber树之前清空lanes
+  workInProgress.lanes = NoLanes;
+
   switch (workInProgress.tag) {
     // 因为在React里组件其实有两种，一种是函数组件，一种是类组件，但是它们都是都是函数
     case IndeterminateComponent:

@@ -5,6 +5,7 @@ import {
   IndeterminateComponent,
 } from "./ReactWorkTags";
 import { NoFlags } from "./ReactFiberFlags";
+import { NoLanes } from "./ReactFiberLane";
 
 /**
  *
@@ -46,6 +47,9 @@ export function FiberNode(tag, pendingProps, key) {
   this.alternate = null;
 
   this.index = 0;
+
+  this.lanes = NoLanes;
+  this.childLanes = NoLanes;
 }
 
 export function createFiber(tag, pendingProps, key) {
@@ -82,6 +86,8 @@ export function createWorkInProgress(current, pendingProps) {
     // 清空副作用
     workInprogress.flags = NoFlags;
     workInprogress.subtreeFlags = NoFlags;
+
+    workInprogress.deletions = null;
   }
 
   workInprogress.child = current.child;
@@ -90,6 +96,10 @@ export function createWorkInProgress(current, pendingProps) {
   workInprogress.updateQueue = current.updateQueue;
   workInprogress.sibling = current.sibling;
   workInprogress.index = current.index;
+  workInprogress.ref = current.ref;
+  workInprogress.flags = current.flags;
+  workInprogress.lanes = current.lanes;
+  workInprogress.childLanes = current.childLanes;
 
   return workInprogress;
 }

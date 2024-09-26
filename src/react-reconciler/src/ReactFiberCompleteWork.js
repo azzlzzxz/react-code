@@ -13,6 +13,7 @@ import {
   HostText,
   FunctionComponent,
 } from "./ReactWorkTags";
+import { NoLanes, mergeLanes } from "./ReactFiberLane";
 
 /**
  * 把当前的完成的fiber所有的子节点对应的真实DOM都挂载到自己父parent真实DOM节点上
@@ -127,13 +128,19 @@ export function completeWork(current, workInProgress) {
 }
 
 function bubbleProperties(completedWork) {
+  let newChildLanes = NoLanes;
   let subtreeFlags = NoFlags;
   //遍历当前fiber的所有子节点，把所有的子节的副作用，以及子节点的子节点的副作用全部合并
   let child = completedWork.child;
   while (child !== null) {
+    newChildLanes = mergeLanes(
+      newChildLanes,
+      mergeLanes(child.lanes, child.childLanes)
+    );
     subtreeFlags |= child.subtreeFlags;
     subtreeFlags |= child.flags;
     child = child.sibling;
   }
+  completedWork.childLanes = newChildLanes;
   completedWork.subtreeFlags = subtreeFlags;
 }

@@ -180,11 +180,3 @@ export {
   unstable_cancelCallback,
   getCurrentTime as now,
 };
-
-/*
-开始执行任务队列中的任务
-
-function flushWork(startTime) {
-  return workLoop(startTime);
-}
- */

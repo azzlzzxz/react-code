@@ -1,6 +1,5 @@
 import ReactSharedInternals from "shared/ReactSharedInternals";
 import { enqueueConcurrentHookUpdate } from "./ReactFiberConcurrentUpdates";
-import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
 import {
   Passive as PassiveEffect,
   Update as UpdateEffect,
@@ -10,8 +9,12 @@ import {
   Passive as HookPassive,
   Layout as HookLayout,
 } from "./ReactHookEffectTags";
-import { NoLanes } from "./ReactFiberLane";
-import { requestUpdateLane } from "./ReactFiberWorkLoop";
+import { NoLanes, NoLane, mergeLanes, isSubsetOfLanes } from "./ReactFiberLane";
+import {
+  requestUpdateLane,
+  requestEventTime,
+  scheduleUpdateOnFiber,
+} from "./ReactFiberWorkLoop";
 
 const { ReactCurrentDispatcher } = ReactSharedInternals;
 
@@ -37,6 +40,8 @@ let currentlyRenderingFiber = null;
 let workInProgressHook = null;
 // 当前hook对应的老hook
 let currentHook = null;
+// 当前渲染优先级
+let renderLanes = NoLanes;
 
 /************************************ 公共方法 *************************************/
 /**
@@ -47,6 +52,8 @@ function mountWorkInProgressHook() {
     memoizedState: null, //hook的状态 0
     queue: null, //存放本hook的更新队列 queue.pending=update的循环链表
     next: null, //指向下一个hook,一个函数里可以会有多个hook,它们会组成一个单向链表
+    baseState: null, //第一跳过的更新前的状态
+    baseQueue: null, //跳过的更新的链表
   };
   if (workInProgressHook === null) {
     //当前函数对应的fiber的状态等于第一个hook对象
@@ -73,6 +80,8 @@ function updateWorkInProgressHook() {
     memoizedState: currentHook.memoizedState,
     queue: currentHook.queue,
     next: null,
+    baseState: currentHook.baseState,
+    baseQueue: currentHook.baseQueue,
   };
   if (workInProgressHook === null) {
     currentlyRenderingFiber.memoizedState = workInProgressHook = newHook;
@@ -97,39 +106,126 @@ function updateLayoutEffect(create, deps) {
 function updateReducer(reducer) {
   // 获取新的hook
   const hook = updateWorkInProgressHook();
-
   // 获取新的hook的更新队列
   const queue = hook.queue;
-
+  queue.lastRenderedReducer = reducer;
   // 获取老的hook
   const current = currentHook;
-
+  let baseQueue = current.baseQueue;
   // 获取将要生效的的更新队列
   const pendingQueue = queue.pending;
-
-  // 初始化一个新状态，取值为当前状态
-  let newState = current.memoizedState;
-
+  //把新旧更新链表合并
   if (pendingQueue !== null) {
+    if (baseQueue !== null) {
+      const baseFirst = baseQueue.next;
+      const pendingFirst = pendingQueue.next;
+      baseQueue.next = pendingFirst;
+      pendingQueue.next = baseFirst;
+    }
+    current.baseQueue = baseQueue = pendingQueue;
     queue.pending = null;
-    const firstUpdate = pendingQueue.next;
-    let update = firstUpdate;
+  }
+  if (baseQueue !== null) {
+    printQueue(baseQueue);
+    const first = baseQueue.next;
+    let newState = current.baseState;
+    let newBaseState = null;
+    let newBaseQueueFirst = null;
+    let newBaseQueueLast = null;
+    let update = first;
     do {
-      if (update.hasEagerState) {
-        newState = update.eagerState;
+      const updateLane = update.lane;
+      const shouldSkipUpdate = !isSubsetOfLanes(renderLanes, updateLane);
+      if (shouldSkipUpdate) {
+        const clone = {
+          lane: updateLane,
+          action: update.action,
+          hasEagerState: update.hasEagerState,
+          eagerState: update.eagerState,
+          next: null,
+        };
+        if (newBaseQueueLast === null) {
+          newBaseQueueFirst = newBaseQueueLast = clone;
+          newBaseState = newState;
+        } else {
+          newBaseQueueLast = newBaseQueueLast.next = clone;
+        }
+        currentlyRenderingFiber.lanes = mergeLanes(
+          currentlyRenderingFiber.lanes,
+          updateLane
+        );
       } else {
-        const action = update.action;
-        newState = reducer(newState, action);
+        if (newBaseQueueLast !== null) {
+          const clone = {
+            lane: NoLane,
+            action: update.action,
+            hasEagerState: update.hasEagerState,
+            eagerState: update.eagerState,
+            next: null,
+          };
+          newBaseQueueLast = newBaseQueueLast.next = clone;
+        }
+        if (update.hasEagerState) {
+          newState = update.eagerState;
+        } else {
+          const action = update.action;
+          newState = reducer(newState, action);
+        }
       }
       update = update.next;
-    } while (update !== null && update !== firstUpdate);
+    } while (update !== null && update !== first);
+    if (newBaseQueueLast === null) {
+      newBaseState = newState;
+    } else {
+      newBaseQueueLast.next = newBaseQueueFirst;
+    }
+    hook.memoizedState = newState;
+    hook.baseState = newBaseState;
+    hook.baseQueue = newBaseQueueLast;
+    queue.lastRenderedState = newState;
   }
-
-  //计算好新的状态后，不但要改变hook的状态，也要改变hook上队列的lastRenderedState
-  hook.memoizedState = queue.lastRenderedState = newState;
+  if (baseQueue === null) {
+    queue.lanes = NoLanes;
+  }
   const dispatch = queue.dispatch;
-
   return [hook.memoizedState, dispatch];
+
+  /************************代码变更 ************************/
+  // // 获取新的hook
+  // const hook = updateWorkInProgressHook();
+
+  // // 获取新的hook的更新队列
+  // const queue = hook.queue;
+
+  // // 获取老的hook
+  // const current = currentHook;
+
+  // // 获取将要生效的的更新队列
+  // const pendingQueue = queue.pending;
+
+  // // 初始化一个新状态，取值为当前状态
+  // let newState = current.memoizedState;
+
+  // if (pendingQueue !== null) {
+  //   queue.pending = null;
+  //   const firstUpdate = pendingQueue.next;
+  //   let update = firstUpdate;
+  //   do {
+  //     if (update.hasEagerState) {
+  //       newState = update.eagerState;
+  //     } else {
+  //       const action = update.action;
+  //       newState = reducer(newState, action);
+  //     }
+  //     update = update.next;
+  //   } while (update !== null && update !== firstUpdate);
+  // }
+
+  // //计算好新的状态后，不但要改变hook的状态，也要改变hook上队列的lastRenderedState
+  // hook.memoizedState = queue.lastRenderedState = newState;
+  // const dispatch = queue.dispatch;
+
+  // return [hook.memoizedState, dispatch];
 }
 
 // 挂载reducer
@@ -158,6 +254,7 @@ function mountReducer(reducer, initialArg) {
  * @param {*} action 派发的动作
  */
 function dispatchReducerAction(fiber, queue, action) {
+  const lane = requestUpdateLane();
   // console.log(fiber, queue, action);
   //在每个hook里会存放一个更新队列，更新队列是一个更新对象的循环链表update1.next=update2.next=update1
   const update = {
@@ -167,7 +264,8 @@ function dispatchReducerAction(fiber, queue, action) {
   //把当前的最新的更新添加到更新队列中，并且返回当前的根fiber
   const root = enqueueConcurrentHookUpdate(fiber, queue, update);
   // console.log(root);
-  scheduleUpdateOnFiber(root);
+  const eventTime = requestEventTime();
+  scheduleUpdateOnFiber(root, fiber, lane, eventTime);
 }
 
 /************************************ useState 实现 *************************************/
@@ -238,7 +336,9 @@ function dispatchSetState(fiber, queue, action) {
 
   //下面是真正的入队更新，并调度更新逻辑
   const root = enqueueConcurrentHookUpdate(fiber, queue, update, lane);
-  scheduleUpdateOnFiber(root, fiber, lane);
+  const eventTime = requestEventTime();
+
+  scheduleUpdateOnFiber(root, fiber, lane, eventTime);
 }
 
 /************************************ useEffect 实现 *************************************/
@@ -389,10 +489,24 @@ function updateRef() {
  * @param {*} props 组件属性
  * @returns 虚拟DOM或者说React元素
  */
-export function renderWithHooks(current, workInProgress, Component, props) {
-  currentlyRenderingFiber = workInProgress; // Function组件对应的 fiber
+export function renderWithHooks(
+  current,
+  workInProgress,
+  Component,
+  props,
+  nextRenderLanes
+) {
+  //当前正在渲染的车道
+  renderLanes = nextRenderLanes;
+
+  // Function组件对应的 fiber
+  currentlyRenderingFiber = workInProgress;
+
   // 函数组件更新队列里存的effect（因为每次渲染都会构建新的updateQueue，所以在渲染之前要清空，否则会重复）
   workInProgress.updateQueue = null;
+
+  // 函数组件状态存的hooks的链表
+  workInProgress.memoizedState = null;
 
   // 如果有老的fiber,并且有老的hook链表，进入更新逻辑
   if (current !== null && current.memoizedState !== null) {
@@ -406,5 +520,20 @@ export function renderWithHooks(current, workInProgress, Component, props) {
   currentlyRenderingFiber = null;
   workInProgress = null;
   currentHook = null;
+  renderLanes = NoLanes;
+
   return children;
+}
+
+/****************************** 打印测试代码 ******************************/
+function printQueue(queue) {
+  const first = queue.next;
+  let desc = "";
+  let update = first;
+  do {
+    desc += "=>" + update.action.id;
+    update = update.next;
+  } while (update !== null && update !== first);
+  desc += "=>null";
+  console.log(desc);
 }

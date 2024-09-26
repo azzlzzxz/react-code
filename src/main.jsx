@@ -1,19 +1,40 @@
 import * as React from "./react";
 import { createRoot } from "react-dom/src/client/ReactDOMRoot";
 
+let counter = 0;
+let timer;
+let bCounter = 0;
+let cCounter = 0;
 function FunctionComponent() {
-  const btnRef = React.useRef();
-
+  const [numbers, setNumbers] = React.useState(new Array(10).fill("A"));
+  const divRef = React.useRef();
+  const updateB = (numbers) => new Array(10).fill(numbers[0] + "B");
+  updateB.id = "updateB" + bCounter++;
+  const updateC = (numbers) => new Array(10).fill(numbers[0] + "C");
+  updateC.id = "updateC" + cCounter++;
   React.useEffect(() => {
-    console.log("btnRef1", btnRef.current);
-  }, [])
-
+    timer = setInterval(() => {
+      divRef.current.click(); // 1
+      if (counter++ === 0) {
+        setNumbers(updateB); // 16
+      }
+      divRef.current.click(); // 1
+      if (counter++ > 100) {
+        clearInterval(timer);
+      }
+    });
+  }, []);
   return (
-    <div>
-      <button ref={btnRef}>btn1</button>
-      <button ref={(instance) => console.log("btnRef2", instance)}>
-        btn2
-      </button>
+    <div
+      ref={divRef}
+      key="11111"
+      onClick={() => {
+        setNumbers(updateC);
+      }}
+    >
+      {numbers.map((number, index) => (
+        <span key={index}>{number}</span>
+      ))}
     </div>
   );
 }
