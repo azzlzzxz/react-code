@@ -20,6 +20,7 @@ const HooksDispatcherOnMount = {
   useState: mountState,
   useEffect: mountEffect,
   useLayoutEffect: mountLayoutEffect,
+  useRef: mountRef,
 };
 
 const HooksDispatcherOnUpdate = {
@@ -27,6 +28,7 @@ const HooksDispatcherOnUpdate = {
   useState: updateState,
   useEffect: updateEffect,
   useLayoutEffect: updateLayoutEffect,
+  useRef: updateRef,
 };
 
 // 当前函数组件对应的 fiber
@@ -360,6 +362,21 @@ function areHookInputsEqual(nextDeps, prevDeps) {
     return false;
   }
   return true;
+}
+
+/************************************ useRef 实现 *************************************/
+
+function mountRef(initialValue) {
+  const hook = mountWorkInProgressHook();
+  const ref = {
+    current: initialValue,
+  };
+  hook.memoizedState = ref;
+  return ref;
+}
+function updateRef() {
+  const hook = updateWorkInProgressHook();
+  return hook.memoizedState;
 }
 
 /************************************ renderWithHooks 入口函数 *************************************/

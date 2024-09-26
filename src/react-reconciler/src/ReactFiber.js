@@ -18,6 +18,7 @@ export function FiberNode(tag, pendingProps, key) {
   this.type = null; // fiber类型，来自于虚拟DOM节点的type：div、span、p
   // 每个虚拟DOM --> fiber节点 --> 真实DOM
   this.stateNode = null; // 此fiber对应的真实DOM节点
+  this.ref = null;
 
   this.return = null; // 指向父节点
   this.child = null; // 指向第一个子节点
@@ -43,8 +44,8 @@ export function FiberNode(tag, pendingProps, key) {
   //我们使用双缓冲池技术，因为我们知道我们最多只需要树的两个版本。
   //我们将可以自由重用的“其他”未使用节点集合在一起。
   this.alternate = null;
-  
-  this.index = 0
+
+  this.index = 0;
 }
 
 export function createFiber(tag, pendingProps, key) {
