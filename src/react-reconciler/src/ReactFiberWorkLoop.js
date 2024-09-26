@@ -88,7 +88,7 @@ function ensureRootIsScheduled(root) {
   // 获取新的调度优先级
   const newCallbackPriority = getHighestPriorityLane(nextLanes);
 
-  //新的回调任务
+  // 新的回调任务
   let newCallbackNode = null;
 
   // 如果新的优先级是同步的话
@@ -128,7 +128,7 @@ function ensureRootIsScheduled(root) {
     );
   }
 
-  //在根节点上执行的任务是newCallbackNode
+  // 在根节点上执行的任务是newCallbackNode
   root.callbackNode = newCallbackNode;
 
   /**************************** 上面的代码变更前 *****************************/
@@ -152,7 +152,10 @@ function performSyncWorkOnRoot(root) {
   //获取新渲染完成的fiber根节点
   const finishedWork = root.current.alternate;
   root.finishedWork = finishedWork;
+
   commitRoot(root);
+
+  // flushSyncCallbacks 里的 callback根据是否为null，来中断循环
   return null;
 }
 
@@ -161,6 +164,7 @@ function performSyncWorkOnRoot(root) {
  * @param {*} root
  */
 function performConcurrentWorkOnRoot(root, didTimeout) {
+  // console.log("performConcurrentWorkOnRoot");
   //先获取当前根节点上的任务
   const originalCallbackNode = root.callbackNode;
   //获取当前优先级最高的车道
@@ -179,6 +183,8 @@ function performConcurrentWorkOnRoot(root, didTimeout) {
 
   //都是真，才能进行时间分片，也就是进行并发渲染，也就是可以中断执行
   const shouldTimeSlice = nonIncludesBlockingLane && nonTimeout;
+
+  // console.log("shouldTimeSlice", shouldTimeSlice);
 
   const exitStatus = shouldTimeSlice
     ? renderRootConcurrent(root, lanes)
@@ -276,8 +282,9 @@ function workLoopSync() {
 function workLoopConcurrent() {
   //如果有下一个要构建的fiber并且时间片没有过期
   while (workInProgress !== null && !shouldYield()) {
-    //console.log('shouldYield()', shouldYield(), workInProgress);
+    // sleep(6);
     performUnitOfWork(workInProgress);
+    // console.log("shouldYield()", shouldYield(), workInProgress);
   }
 }
 
@@ -350,8 +357,9 @@ function flushPassiveEffect() {
 }
 
 function commitRoot(root) {
-  printFinishedWork(root.finishedWork);
+  // printFinishedWork(root.finishedWork);
   const previousUpdatePriority = getCurrentUpdatePriority();
+  // 在提交阶段肯定是同步执行，所以需要把优先级设置为 1
   try {
     //把当前的更新优先级设置为1
     setCurrentUpdatePriority(DiscreteEventPriority);
@@ -491,4 +499,15 @@ function getFlags(flags) {
     return `更新`;
   }
   return flags;
+}
+
+/******************************** 延迟执行测试代码 ********************************/
+function sleep(duration) {
+  const timeStamp = new Date().getTime();
+  const endTime = timeStamp + duration;
+  while (true) {
+    if (new Date().getTime() > endTime) {
+      return;
+    }
+  }
 }

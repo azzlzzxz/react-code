@@ -8,12 +8,24 @@ import { createRoot } from "react-dom/src/client/ReactDOMRoot";
 
 function FunctionComponent() {
   const [number, setNumber] = React.useState(0);
-  return <button onClick={() => {
-    setNumber(number + 1)
-  }}>{number}</button>
+
+  React.useEffect(() => {
+    // debugger
+    setNumber(number => number + 1)
+  },[])
+
+  return (
+    <button
+      onClick={() => {
+        setNumber(number + 1);
+      }}
+    >
+      {number}
+    </button>
+  );
 }
 
-  let element = <FunctionComponent/>
+let element = <FunctionComponent />;
 
 const root = createRoot(document.getElementById("root"));
 
