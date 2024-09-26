@@ -518,7 +518,7 @@ export function renderWithHooks(
 
   const children = Component(props);
   currentlyRenderingFiber = null;
-  workInProgress = null;
+  workInProgressHook = null;
   currentHook = null;
   renderLanes = NoLanes;
 

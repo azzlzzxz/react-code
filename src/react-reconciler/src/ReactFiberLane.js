@@ -79,7 +79,6 @@ export function includesBlockingLane(root, lanes) {
 
 // 取是左侧的1的索引
 function pickArbitraryLaneIndex(lanes) {
-  console.log(111, lanes);
   // clz32返回最左侧的1的左边0的个数
   return 31 - Math.clz32(lanes);
 }
