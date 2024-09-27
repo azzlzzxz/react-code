@@ -6,11 +6,11 @@ let timer;
 let bCounter = 0;
 let cCounter = 0;
 function FunctionComponent() {
-  const [numbers, setNumbers] = React.useState(new Array(10).fill("A"));
+  const [numbers, setNumbers] = React.useState(new Array(100).fill("A"));
   const divRef = React.useRef();
-  const updateB = (numbers) => new Array(10).fill(numbers[0] + "B");
+  const updateB = (numbers) => new Array(100).fill(numbers[0] + "B");
   updateB.id = "updateB" + bCounter++;
-  const updateC = (numbers) => new Array(10).fill(numbers[0] + "C");
+  const updateC = (numbers) => new Array(100).fill(numbers[0] + "C");
   updateC.id = "updateC" + cCounter++;
   React.useEffect(() => {
     timer = setInterval(() => {
@@ -40,7 +40,5 @@ function FunctionComponent() {
 }
 
 let element = <FunctionComponent />;
-
 const root = createRoot(document.getElementById("root"));
-
 root.render(element);
