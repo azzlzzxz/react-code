@@ -1,8 +1,8 @@
-import { registerSimpleEvents } from '../DOMEventProperties';
-import { IS_CAPTURE_PHASE } from '../EventSystemFlags';
-import { accumulateSinglePhaseListeners } from '../DOMPluginEventSystem';
-import { topLevelEventsToReactNames } from '../DOMEventProperties';
-import { SyntheticMouseEvent } from '../SyntheticEvent';
+import { registerSimpleEvents } from "../DOMEventProperties";
+import { IS_CAPTURE_PHASE } from "../EventSystemFlags";
+import { accumulateSinglePhaseListeners } from "../DOMPluginEventSystem";
+import { topLevelEventsToReactNames } from "../DOMEventProperties";
+import { SyntheticMouseEvent } from "../SyntheticEvent";
 
 /**
  * 把要执行回调函数添加到dispatchQueue中
@@ -15,41 +15,48 @@ import { SyntheticMouseEvent } from '../SyntheticEvent';
  * @param {*} targetContainer  目标容器 div#root
  */
 function extractEvents(
-    dispatchQueue,
-    domEventName,
+  dispatchQueue,
+  domEventName,
+  targetInst,
+  nativeEvent,
+  nativeEventTarget, //click => onClick
+  eventSystemFlags,
+  targetContainer
+) {
+  const reactName = topLevelEventsToReactNames.get(domEventName); //click=>onClick
+
+  //合成事件的构建函数
+  let SyntheticEventCtor;
+
+  switch (domEventName) {
+    case "click":
+      SyntheticEventCtor = SyntheticMouseEvent;
+      break;
+    default:
+      break;
+  }
+
+  const isCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0; //是否是捕获阶段
+  const listeners = accumulateSinglePhaseListeners(
     targetInst,
+    reactName,
+    nativeEvent.type,
+    isCapturePhase
+  );
+
+  //如果有要执行的监听函数的话 listeners=[onClickCapture,onClickCapture]=[ChildCapture,ParentCapture]
+  const event = new SyntheticEventCtor(
+    reactName,
+    domEventName,
+    null,
     nativeEvent,
-    nativeEventTarget,//click => onClick
-    eventSystemFlags,
-    targetContainer) {
-    const reactName = topLevelEventsToReactNames.get(domEventName);//click=>onClick
-    
-    //合成事件的构建函数
-    let SyntheticEventCtor;
-    
-    switch (domEventName) {
-        case 'click':
-          SyntheticEventCtor = SyntheticMouseEvent;
-          break;
-        default:
-          break;
-    }
-    
-    const isCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0;//是否是捕获阶段
-    const listeners = accumulateSinglePhaseListeners(
-      targetInst,
-      reactName,
-      nativeEvent.type,
-      isCapturePhase
-    );
-    
-    //如果有要执行的监听函数的话 listeners=[onClickCapture,onClickCapture]=[ChildCapture,ParentCapture]
-    const event = new SyntheticEventCtor(reactName, domEventName, null, nativeEvent, nativeEventTarget);
-    
-    dispatchQueue.push({
-        event,//合成事件实例
-        listeners//监听函数数组
-    });
+    nativeEventTarget
+  );
+
+  dispatchQueue.push({
+    event, //合成事件实例
+    listeners, //监听函数数组
+  });
 }
 
-export { registerSimpleEvents as registerEvents, extractEvents }
+export { registerSimpleEvents as registerEvents, extractEvents };

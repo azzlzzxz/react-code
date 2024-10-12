@@ -1,21 +1,21 @@
-import { registerTwoPhaseEvent } from './EventRegistry';
+import { registerTwoPhaseEvent } from "./EventRegistry";
 
-const simpleEventPluginEvents = ['click'];
+const simpleEventPluginEvents = ["click"];
 
 export const topLevelEventsToReactNames = new Map();
 
 /**
- * onClick在哪里可以取到： 在 createInstance 方法里的 
+ * onClick在哪里可以取到： 在 createInstance 方法里的
  * function updateFiberProps(domElement, props) { node[internalPropsKey] = props }
  * 真实DOM元素[internalPropsKey] = props props.onClick
- * @param {*} domEventName 
- * @param {*} reactName 
+ * @param {*} domEventName
+ * @param {*} reactName
  */
 function registerSimpleEvent(domEventName, reactName) {
   //把原生事件名和处理函数的名字进行映射或者说绑定，click=>onClick
   topLevelEventsToReactNames.set(domEventName, reactName);
 
-  registerTwoPhaseEvent(reactName, [domEventName]);//'onClick' ['click']
+  registerTwoPhaseEvent(reactName, [domEventName]); //'onClick' ['click']
 }
 
 export function registerSimpleEvents() {

@@ -10,7 +10,7 @@ export function registerTwoPhaseEvent(registrationName, dependencies) {
   //注册冒泡事件的对应关系
   registerDirectEvent(registrationName, dependencies);
   //注意捕获事件的对应的关系
-  registerDirectEvent(registrationName + 'Capture', dependencies);
+  registerDirectEvent(registrationName + "Capture", dependencies);
 }
 
 export function registerDirectEvent(registrationName, dependencies) {
